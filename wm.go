@@ -1,4 +1,4 @@
-package workerManager
+package workerControl
 
 import (
 	"context"
@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	WMCtl = NewWorkerManager()
+	WMCtl = NewWorkerControl()
 )
 
 type Worker interface {
@@ -30,7 +30,7 @@ type Worker interface {
 	//Status()
 }
 
-type WorkerManager struct {
+type workerControl struct {
 	sync.WaitGroup
 	WorkerSlice []Worker
 	tryCatch    bool
@@ -40,8 +40,8 @@ type WorkerManager struct {
 	CtxCancel   context.CancelFunc
 }
 
-func NewWorkerManager() *WorkerManager {
-	wm := WorkerManager{
+func NewWorkerControl() *workerControl {
+	wm := workerControl{
 		Running: true,
 	}
 
@@ -52,7 +52,7 @@ func NewWorkerManager() *WorkerManager {
 	return &wm
 }
 
-func (wm *WorkerManager) MakeSignal() {
+func (wm *workerControl) MakeSignal() {
 	signal.Notify(wm.Q,
 		syscall.SIGHUP,
 		syscall.SIGINT,
@@ -63,7 +63,7 @@ func (wm *WorkerManager) MakeSignal() {
 	)
 }
 
-func (wm *WorkerManager) RecvSignal() os.Signal {
+func (wm *workerControl) RecvSignal() os.Signal {
 	select {
 	case s := <-wm.Q:
 		defualtLogger(logInfoLevel, fmt.Sprintf("custom recv signale: %+v", s))
@@ -71,24 +71,24 @@ func (wm *WorkerManager) RecvSignal() os.Signal {
 	}
 }
 
-func (wm *WorkerManager) MakeRecvSignal() os.Signal {
+func (wm *workerControl) MakeRecvSignal() os.Signal {
 	wm.MakeSignal()
 	return wm.RecvSignal()
 }
 
-func (wm *WorkerManager) AddWorker(w Worker) {
+func (wm *workerControl) AddWorker(w Worker) {
 	wm.WorkerSlice = append(wm.WorkerSlice, w)
 }
 
-func (wm *WorkerManager) AddWorkerList(w []Worker) {
+func (wm *workerControl) AddWorkerList(w []Worker) {
 	wm.WorkerSlice = append(wm.WorkerSlice, w...)
 }
 
-func (wm *WorkerManager) SetTryCatch(b bool) {
+func (wm *workerControl) SetTryCatch(b bool) {
 	wm.tryCatch = true
 }
 
-func (wm *WorkerManager) Start() {
+func (wm *workerControl) Start() {
 	for _, worker := range wm.WorkerSlice {
 		go func(w Worker) {
 			if wm.tryCatch {
@@ -101,7 +101,7 @@ func (wm *WorkerManager) Start() {
 	}
 }
 
-func (wm *WorkerManager) Stop() {
+func (wm *workerControl) Stop() {
 	wm.CtxCancel()     // stop
 	wm.Running = false // stop
 	for _, worker := range wm.WorkerSlice {
@@ -109,7 +109,7 @@ func (wm *WorkerManager) Stop() {
 			defer func() {
 				err := recover()
 				if err != nil {
-					defualtLogger(logErrorLevel, fmt.Sprintf("WorkerManager error, error:%v, stack: %v\n",
+					defualtLogger(logErrorLevel, fmt.Sprintf("workerControl error, error:%v, stack: %v\n",
 						err, string(dumpStack())),
 					)
 				}
@@ -120,7 +120,7 @@ func (wm *WorkerManager) Stop() {
 	}
 }
 
-func (wm *WorkerManager) WaitTimeout(timeout int) int {
+func (wm *workerControl) WaitTimeout(timeout int) int {
 	endQ := make(chan bool, 0)
 	go func() {
 		defer close(endQ)
