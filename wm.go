@@ -92,7 +92,7 @@ func (wm *WorkerManager) Start() {
 	for _, worker := range wm.WorkerSlice {
 		go func(w Worker) {
 			if wm.tryCatch {
-				TryCatch(w)
+				tryCatch(w)
 				return
 			}
 
@@ -135,7 +135,7 @@ func (wm *WorkerManager) WaitTimeout(timeout int) int {
 	}
 }
 
-func TryCatch(f Worker) {
+func tryCatch(f Worker) {
 	running := true
 	for running {
 		func(w Worker) {
